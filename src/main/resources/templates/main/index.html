@@ -10,8 +10,7 @@
             /* height:100vw; */
             margin: 0;
             font-family: 'IBM Plex Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-            sans-serif !important;
+            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             /* background-color: #6d7bffd0 !important; */
@@ -70,11 +69,42 @@
             </div>
         </footer>
     </main>
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #fd8f46d0;">
+                    <h5 class="modal-title" id="exampleModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="height:500px;">
+                    <div class="mb-2">
+                        <span id="modalHospitalName" style="font-size:1.25rem; display: block;"></span>
+                        <span id="modalDutyAddr" style="font-size:.85rem; display: block;"></span>
+                        <span id="modalDutyTel" style="font-size:.85rem; display: block;"></span>
+                    </div>
+                    <div id="mapContainer" style="height:400px;position: relative;overflow: hidden;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+<!--                    <button type="button" class="btn btn-primary">Save changes</button>-->
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
     <script src="https://kit.fontawesome.com/368fe9516c.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=3dd385a5b5fdd93bc717ff97179e6e14&libraries=services"></script>
     <script type="text/javascript">
+
+        const myModalEl = document.getElementById('exampleModal')
+        myModalEl.addEventListener('shown.bs.modal', (e) => { // show는 modal 사이즈가 계산되지 않은 상태라 카카오맵 타일들이 깨짐
+            renderMap(e);
+        });
+
+        GetHospitalList();
 
         /*  API 호출부분 */
         async function getDataApi(stage1, stage2) {
@@ -128,6 +158,8 @@
                             hospitalsAvailTmp[indexAvail].dutyAddr = hospitalsAddr[indexAddr].dutyAddr;
                             let targetLat = hospitalsAddr[indexAddr].wgs84Lat ?? 0;
                             let targetLng = hospitalsAddr[indexAddr].wgs84Lon ?? 0;
+                            hospitalsAvailTmp[indexAvail].targetLat = targetLat;
+                            hospitalsAvailTmp[indexAvail].targetLng = targetLng;
                             hospitalsAvailTmp[indexAvail].distCalc = Distance(lat, lng, targetLat, targetLng, 'K').toFixed(2);
                         }
                     }
@@ -137,24 +169,25 @@
                     return a.distCalc - b.distCalc;
                 });
 
+                // TODO: 나중에 base64 로 인코딩하기
                 const result = (hospitalsAvailTmp).map(hospital => hospital.distCalc == 0 ? "" :
-                    `<a class="list-group-item list-group-item-action flex-column align-items-start"  style="min-height:70px;">
-                  <div class="d-flex ">
-                    <div style="width:30px; padding:10px 0;">
-                      <span style="color:${GetAvailableNumberColor(hospital.hvec)}">●</span>
-                    </div>
-                    <div style="min-width:160px;">
-                      <span style="display:block; font-weight:500">${hospital.dutyName}</span>
-                      <span style="display:block; font-size:.75rem">${hospital.dutyAddr}</span>
-                    </div>
-                    <div class="ms-auto">
-                      <span style="display:block; text-align:right; font-size:.75rem; color: #fd8f46;">${ hospital.distCalc } km 이내</span>
-                      <span style="display:block; text-align:right; font-size:.75rem;" >가용병상: ${hospital.hvec <= 0 ? 0 : hospital.hvec }석</span>
-                      <span style="display:block; text-align:right; font-size:.75rem;" >마지막 업데이트:&nbsp;
-                      ${ hospital.hvidate.toString().substring(8).substring(0,2) }시 ${hospital.hvidate.toString().substring(8).substring(3,4)}분 </span>
-                    </div>
-                  </div>
-                </a>`);
+                    `<a class="list-group-item list-group-item-action flex-column align-items-start" data-bs-toggle="modal" data-bs-target="#exampleModal" data-enc="${b64EncodeUnicode(JSON.stringify(hospital))}" style="min-height:70px;">
+                      <div class="d-flex ">
+                        <div style="width:30px; padding:10px 0;">
+                          <span style="color:${GetAvailableNumberColor(hospital.hvec)}">●</span>
+                        </div>
+                        <div style="min-width:160px;">
+                          <span style="display:block; font-weight:500">${hospital.dutyName}</span>
+                          <span style="display:block; font-size:.75rem">${hospital.dutyAddr}</span>
+                        </div>
+                        <div class="ms-auto">
+                          <span style="display:block; text-align:right; font-size:.75rem; color: #fd8f46;">${ hospital.distCalc } km 이내</span>
+                          <span style="display:block; text-align:right; font-size:.75rem;" >가용병상: ${hospital.hvec <= 0 ? 0 : hospital.hvec }석</span>
+                          <span style="display:block; text-align:right; font-size:.75rem;" >마지막 업데이트:&nbsp;
+                          ${ hospital.hvidate.toString().substring(8).substring(0,2) }시 ${hospital.hvidate.toString().substring(8).substring(3,4)}분 </span>
+                        </div>
+                      </div>
+                    </a>`);
 
                 $("#renderPlace").html(result);
 
@@ -199,7 +232,76 @@
 
         }
 
-        GetHospitalList();
+        function renderMap(e){
+
+            const filter = $(e.relatedTarget).attr('data-enc');
+            const parsedData = JSON.parse(b64DecodeUnicode(filter));
+            console.log(parsedData);
+
+            $("#modalHospitalName").text(parsedData.dutyName);
+            $("#modalDutyAddr").text(parsedData.dutyAddr);
+            $("#modalDutyTel").text(parsedData.dutyTel3);
+            let mapContainer = document.getElementById('mapContainer');
+            let options = {
+                center: new daum.maps.LatLng(33.450701, 126.570667),
+                level: 4
+            };
+
+            let map = new daum.maps.Map(mapContainer, options); //지도 생성 및 객체 리턴
+            let geocoder = new daum.maps.services.Geocoder(); //주소-좌표 변환 객제 생성
+            let roadAddrFull = parsedData.dutyAddr;
+            geocoder.addressSearch(roadAddrFull, function (result, status) { //주소로 좌표 검색.
+                if (status === daum.maps.services.Status.OK) { //검색 완료이면
+                    var coords = new daum.maps.LatLng(parsedData.targetLat, parsedData.targetLng);
+                    var marker = new daum.maps.Marker({
+                        map: map,
+                        position: coords
+                    });
+                    map.setCenter(coords);
+                }
+            });
+
+            var mapTypeControl = new daum.maps.MapTypeControl();
+            var zoomControl = new daum.maps.ZoomControl();
+            map.addControl(mapTypeControl, daum.maps.ControlPosition.TOPRIGHT);
+            map.addControl(zoomControl, daum.maps.ControlPosition.RIGHT);
+
+        }
+
+        function b64EncodeUnicode(str) {
+            return btoa(
+                encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function toSolidBytes(
+                    match,
+                    p1
+                ) {
+                    return String.fromCharCode("0x" + p1);
+                })
+            );
+        }
+
+        function b64DecodeUnicode(str) {
+            return decodeURIComponent(
+                atob(str)
+                    .split("")
+                    .map(function (c) {
+                        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+                    })
+                    .join("")
+            );
+        }
+
+        // var geocoder = new kakao.maps.services.Geocoder();
+        // geocoder.coord2RegionCode(parsedData.targetLng, parsedData.targetLat, AddressInfo);
+        //
+        // function AddressInfo(result, status) {
+        //     if (status === kakao.maps.services.Status.OK) {
+        //         for (var i = 0; i < result.length; i++) {
+        //             if (result[i].region_type === 'H') {
+        //                 console.log(result[i]);
+        //             }
+        //         }
+        //     }
+        // }
 
     </script>
 </body>
