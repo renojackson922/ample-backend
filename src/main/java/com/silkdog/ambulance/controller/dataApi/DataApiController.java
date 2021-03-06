@@ -70,7 +70,7 @@ public class DataApiController {
 
         JSONObject xmlJSONObj = XML.toJSONObject(sb.toString());
         String jsonPrettyPrintString = xmlJSONObj.toString(INDENT_FACTOR);
-        System.out.println(jsonPrettyPrintString);
+        //System.out.println(jsonPrettyPrintString);
 
         return jsonPrettyPrintString;
     }
@@ -123,7 +123,7 @@ public class DataApiController {
 
         JSONObject xmlJSONObj = XML.toJSONObject(sb.toString());
         String jsonPrettyPrintString = xmlJSONObj.toString(INDENT_FACTOR);
-        System.out.println(jsonPrettyPrintString);
+        //System.out.println(jsonPrettyPrintString);
 
         return jsonPrettyPrintString;
     }
