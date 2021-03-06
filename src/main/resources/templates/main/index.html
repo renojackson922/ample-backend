@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>응급실 잔여병상 현황 - v 0.0.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
     <style>
         body{
@@ -53,12 +53,14 @@
                 <span class="amb-title-sub">ver 0.0.1</span>
             </div>
             <div class="input-group mt-4">
-                <input type="text" class="form-control" placeholder="지역명이나 병원명을 입력해주세요" value=""/>
-                <button class="btn btn-outline-secondary" type="button" style="width:40px; background-color: #fff;" ><i class="fas fa-search"></i></button>
+                <input id="searchString" type="text" class="form-control" placeholder="지역명이나 병원명을 입력해주세요" value=""/>
+                <button class="btn btn-outline-secondary" type="button" style="width:40px; background-color: #fff;" onclick="GetHospitalList()"><i class="fas fa-search"></i></button>
                 <button class="btn btn-outline-secondary" type="button" style="width:40px; background-color: #fff;" ><i class="fas fa-map-pin"></i></button>
             </div>
-            <div class="mt-2">
-
+            <div id="renderPlace" class="mt-2">
+                <div class="text-center">
+                    로딩 중...
+                </div>
             </div>
         </div>
         </div>
@@ -68,80 +70,136 @@
             </div>
         </footer>
     </main>
+    <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
     <script src="https://kit.fontawesome.com/368fe9516c.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script type="text/javascript">
 
-        let lng = 0.00;
-        let lat = 0.00;
+        /*  API 호출부분 */
+        async function getDataApi(stage1, stage2) {
+            const response = await axios.all([getHospitalAvailable(stage1, stage2), getHospitalAddr(stage1, stage2)])
+            console.log(response)
+            return response;
+        }
+        function getHospitalAvailable(stage1, stage2){
+            return axios.get(`/api/getHospitalAvailable?stage1=${stage1}&stage2=${stage2}`);
+        }
+        function getHospitalAddr(stage1, stage2){
+            return axios.get(`/api/getHospitalAddr?stage1=${stage1}&stage2=${stage2}`);
+        }
 
-        if(navigator.geolocation){
-            navigator.geolocation.getCurrentPosition(function(position) {
-                lng = (position.coords.longitude)
-                lat = (position.coords.latitude)
-                console.log(lat, lng)
+        function GetHospitalList(){
+
+            let lng = 0.00;
+            let lat = 0.00;
+
+            $("#renderPlace").html(
+                `<div class="text-center">
+                    로딩 중...
+                </div>`
+            );
+
+            if(navigator.geolocation){
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    lng = (position.coords.longitude)
+                    lat = (position.coords.latitude)
+                    console.log(lat, lng)
+                });
+            }
+
+            const searchString = $("#searchString");
+            _stage1 = searchString.val() === "" ? "" : searchString.val().split(' ')[0];
+            _stage2 = searchString.val() === "" ? "" : searchString.val().split(' ')[1];
+
+            //console.log(_stage1, _stage2);
+
+            getDataApi(_stage1, _stage2).then((e)=>{
+                //console.log(_stage1, _stage2);
+                let hospitalsAvailTmp = e[0].data.response.body.items.item;
+                const hospitalsAddr = e[1].data.response.body.items.item;
+
+                // 두 개의 JSON 데이터를 조회하여 HPID 공통키가 있는 것들을 조회해서 주소와 위/경도 정보 밀어넣기
+                for (let [indexAvail, valAvail] of hospitalsAvailTmp.entries()) {
+                    hospitalsAvailTmp[indexAvail].dutyAddr = "주소정보가 없습니다"
+                    hospitalsAvailTmp[indexAvail].distCalc = 0
+                    for (let [indexAddr, valAddr] of hospitalsAddr.entries()) {
+                        if(hospitalsAvailTmp[indexAvail].hpid === hospitalsAddr[indexAddr].hpid){
+                            hospitalsAvailTmp[indexAvail].dutyAddr = hospitalsAddr[indexAddr].dutyAddr;
+                            let targetLat = hospitalsAddr[indexAddr].wgs84Lat ?? 0;
+                            let targetLng = hospitalsAddr[indexAddr].wgs84Lon ?? 0;
+                            hospitalsAvailTmp[indexAvail].distCalc = Distance(lat, lng, targetLat, targetLng, 'K').toFixed(2);
+                        }
+                    }
+                }
+
+                hospitalsAvailTmp.sort((a,b) => {
+                    return a.distCalc - b.distCalc;
+                });
+
+                const result = (hospitalsAvailTmp).map(hospital => hospital.distCalc == 0 ? "" :
+                    `<a class="list-group-item list-group-item-action flex-column align-items-start"  style="min-height:70px;">
+                  <div class="d-flex ">
+                    <div style="width:30px; padding:10px 0;">
+                      <span style="color:${GetAvailableNumberColor(hospital.hvec)}">●</span>
+                    </div>
+                    <div style="min-width:160px;">
+                      <span style="display:block; font-weight:500">${hospital.dutyName}</span>
+                      <span style="display:block; font-size:.75rem">${hospital.dutyAddr}</span>
+                    </div>
+                    <div class="ms-auto">
+                      <span style="display:block; text-align:right; font-size:.75rem; color: #fd8f46;">${ hospital.distCalc } km 이내</span>
+                      <span style="display:block; text-align:right; font-size:.75rem;" >가용병상: ${hospital.hvec <= 0 ? 0 : hospital.hvec }석</span>
+                      <span style="display:block; text-align:right; font-size:.75rem;" >마지막 업데이트:&nbsp;
+                      ${ hospital.hvidate.toString().substring(8).substring(0,2) }시 ${hospital.hvidate.toString().substring(8).substring(3,4)}분 </span>
+                    </div>
+                  </div>
+                </a>`);
+
+                $("#renderPlace").html(result);
+
             });
         }
 
-        /*  API 호출부분 */
-        async function getDataApi() {
-            const response = await axios.all([getHopspitalAvailable(), getHopspitalAddr()])
-            //console.log(response)
-            return response;
-        }
-        function getHopspitalAvailable(stage1, stage2){
-            return axios.get('http://localhost:5000/dataApi/getHospitalAvailable', { stage1: stage1, stage2: stage2  })
-        }
-        function getHopspitalAddr(stage1, stage2){
-            return axios.get('http://localhost:5000/dataApi/getHospitalAddr', { stage1: stage1, stage2: stage2  })
-        }
-
-        const apiPlace = getDataApi();
-
-        let hosptialsAvailTmp = apiPlace[0].data;
-        const hosptialsAddr = apiPlace[1].data;
-
-        // 두 개의 JSON 데이터를 조회하여 HPID 공통키가 있는 것들을 조회해서 주소와 위/경도 정보 밀어넣기
-        for (let [indexAvail, valAvail] of hosptialsAvailTmp.entries()) {
-            hosptialsAvailTmp[indexAvail].dutyAddr = "주소정보가 없습니다"
-            hosptialsAvailTmp[indexAvail].distCalc = 0
-            for (let [indexAddr, valAddr] of hosptialsAddr.entries()) {
-                if(hosptialsAvailTmp[indexAvail].hpid === hosptialsAddr[indexAddr].hpid){
-                    hosptialsAvailTmp[indexAvail].dutyAddr = hosptialsAddr[indexAddr].dutyAddr;
-                    let targetLat = hosptialsAddr[indexAddr].wgs84Lat ?? 0;
-                    let targetLng = hosptialsAddr[indexAddr].wgs84Lon ?? 0;
-                    hosptialsAvailTmp[indexAvail].distCalc = Distance(lat, lng, targetLat, targetLng, 'K').toFixed(2);
+        function Distance(lat1, lon1, lat2, lon2, unit) {
+            if ((lat1 == lat2) && (lon1 == lon2)) {
+                return 0;
+            }
+            else {
+                var radlat1 = Math.PI * lat1/180;
+                var radlat2 = Math.PI * lat2/180;
+                var theta = lon1-lon2;
+                var radtheta = Math.PI * theta/180;
+                var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+                if (dist > 1) {
+                    dist = 1;
                 }
+                dist = Math.acos(dist);
+                dist = dist * 180/Math.PI;
+                dist = dist * 60 * 1.1515;
+                if (unit=="K") { dist = dist * 1.609344 }
+                if (unit=="N") { dist = dist * 0.8684 }
+                return dist;
             }
         }
 
-        hosptialsAvailTmp.sort((a,b) => {
-            return a.distCalc - b.distCalc;
-        });
+        function GetAvailableNumberColor(t){
 
+            const roomAvailable = t || 0;
+            if (roomAvailable >= 8)
+                return "green";
+            else if (roomAvailable >= 4 && roomAvailable < 8)
+                return"orange";
+            else if (roomAvailable >= 1 && roomAvailable < 4)
+                return "red";
+            else if (roomAvailable <= 0)
+                return "#888";
+            else
+                return "#000";
 
-        console.log(hosptialsAvailTmp)
+        }
 
-        // return (hosptialsAvailTmp).map(hospital => hospital.distCalc == 0 ? "" :
-        //     `<a class="list-group-item list-group-item-action flex-column align-items-start"  style="min-height:70px;">
-        //           <div class="d-flex "> {/*d-flex w-100 justify-content-between*/}
-        //             <div style="width:30px; padding:10px 0;">
-        //               <span>●</span>
-        //             </div>
-        //             <div style="min-width:160px;">
-        //               <span style="display:block; font-weight:500">{hospital.dutyName}</span>
-        //               <span style="display:block; font-size:.75rem">{hospital.dutyAddr}</span>
-        //             </div>
-        //             <div class="ms-auto">
-        //               <span style="display:block; text-align:right; font-size:.75rem; color: #fd8f46;">{ hospital.distCalc } km 이내</span>
-        //               <span style="display:block; text-align:right; font-size:.75rem;" >가용병상: {hospital.hvec <= 0 ? 0 : hospital.hvec }석</span>
-        //               <span style="display:block; text-align:right; font-size:.75rem;" >마지막 업데이트:&nbsp;
-        //               { hospital.hvidate.toString().substring(8).substring(0,2) }시 {hospital.hvidate.toString().substring(8).substring(3,4)}분 </span>
-        //             </div>
-        //           </div>
-        //         </a>`;
-
+        GetHospitalList();
 
     </script>
 </body>
