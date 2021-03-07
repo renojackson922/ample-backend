@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script src="https://developers.kakao.com/sdk/js/kakao.js"></script>
+<script>
+    const APP_KEY = "622a26bbe65339602e2bea28321bb212";
+
+    getNavi();
+
+    function getNavi(){
+        Kakao.init(APP_KEY);
+        if(!(
+            navigator.userAgent.match(/Android/i) ||
+            navigator.userAgent.match(/webOS/i) ||
+            navigator.userAgent.match(/iPhone/i) ||
+            navigator.userAgent.match(/iPod/i) ||
+            navigator.userAgent.match(/BlackBerry/i) ||
+            navigator.userAgent.match(/Windows Phone/i)
+        )){
+            alert("카카오 내비는 모바일 환경에서만 작동합니다.")
+            self.close();
+            return;
+        }
+        if(!Kakao.isInitialized()){
+            alert("카카오API가 로드되지 않았습니다. 잠시 후에 다시 시도해주세요.");
+            self.close();
+            return;
+        }
+        Kakao.Navi.start({
+            name: "현대백화점 판교점",
+            x: 127.11205203011632,
+            y: 37.39279717586919,
+            coordType: 'wgs84'
+        });
+    }
+
+
+</script>
+</body>
+</html>

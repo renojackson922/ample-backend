@@ -14,4 +14,12 @@ public class MainController {
 
         return "/main/index";
     }
+
+    @RequestMapping("popupNavi")
+    public String popupNavi(Model model){
+
+        model.addAttribute("test", "test");
+
+        return "/main/popup_navi";
+    }
 }
