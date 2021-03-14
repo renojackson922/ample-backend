@@ -6,8 +6,25 @@ const myModalEl = document.getElementById('exampleModal')
 myModalEl.addEventListener('shown.bs.modal', (e) => { // show는 modal 사이즈가 계산되지 않은 상태라 카카오맵 타일들이 깨짐
     renderMap(e);
 });
+myModalEl.addEventListener('hidden.bs.modal', (e) => {
+    destroyMap(e);
+})
 
-GetHospitalList();
+$(function(){
+
+    navigator.geolocation.watchPosition(function(position) {
+        GetHospitalList();
+    },
+    function(error) {
+        if (error.code == error.PERMISSION_DENIED){
+            $('.dim-location-helper').css('display', 'flex');
+        }
+
+    });
+
+});
+
+
 
 /*  API 호출부분 */
 async function getDataApi(stage1, stage2) {
@@ -29,8 +46,8 @@ function GetHospitalList(){
 
     $("#renderPlace").html(
         `<div class="text-center">
-                    로딩 중...
-                </div>`
+            로딩 중...
+        </div>`
     );
 
     if(navigator.geolocation){
@@ -75,26 +92,28 @@ function GetHospitalList(){
         // TODO: 나중에 base64 로 인코딩하기
         const result = (hospitalsAvailTmp).map(hospital => hospital.distCalc == 0 ? "" :
             `<a class="list-group-item list-group-item-action flex-column align-items-start" data-bs-toggle="modal" data-bs-target="#exampleModal" data-enc="${b64EncodeUnicode(JSON.stringify(hospital))}" style="min-height:70px;">
-                      <div class="d-flex ">
-                        <div style="width:30px; padding:10px 0;">
-                          <span style="color:${GetAvailableNumberColor(hospital.hvec)}">●</span>
-                        </div>
-                        <div style="min-width:160px;">
-                          <span style="display:block; font-weight:500">${hospital.dutyName}</span>
-                          <span style="display:block; font-size:.75rem">${hospital.dutyAddr}</span>
-                        </div>
-                        <div class="ms-auto">
-                          <span style="display:block; text-align:right; font-size:.75rem; color: #fd8f46;">${ hospital.distCalc } km 이내</span>
-                          <span style="display:block; text-align:right; font-size:.75rem;" >가용병상: ${hospital.hvec <= 0 ? 0 : hospital.hvec }석</span>
-                          <span style="display:block; text-align:right; font-size:.75rem;" >마지막 업데이트:&nbsp;
-                          ${ hospital.hvidate.toString().substring(8).substring(0,2) }시 ${hospital.hvidate.toString().substring(8).substring(3,4)}분 </span>
-                        </div>
-                      </div>
-                    </a>`);
+                  <div class="d-flex ">
+                    <div style="width:30px; padding:10px 0;">
+                      <span style="color:${GetAvailableNumberColor(hospital.hvec)}">●</span>
+                    </div>
+                    <div style="min-width:160px;">
+                      <span style="display:block; font-weight:500">${hospital.dutyName}</span>
+                      <span style="display:block; font-size:.75rem">${hospital.dutyAddr}</span>
+                    </div>
+                    <div class="ms-auto">
+                      <span style="display:block; text-align:right; font-size:.75rem; color: #fd8f46;">${ hospital.distCalc } km 이내</span>
+                      <span style="display:block; text-align:right; font-size:.75rem;" >가용병상: ${hospital.hvec <= 0 ? 0 : hospital.hvec }석</span>
+                      <span style="display:block; text-align:right; font-size:.75rem;" >마지막 업데이트:&nbsp;
+                      ${ hospital.hvidate.toString().substring(8).substring(0,2) }시 ${hospital.hvidate.toString().substring(8).substring(3,4)}분 </span>
+                    </div>
+                  </div>
+                </a>`);
 
         $("#renderPlace").html(result);
 
     });
+
+
 }
 
 function Distance(lat1, lon1, lat2, lon2, unit) {
@@ -135,7 +154,11 @@ function GetAvailableNumberColor(t){
 
 }
 
+function destroyMap(){
+    $("#exampleModal #mapContainer").empty();
+}
 
+// 이미 그려져 있으면 좌표만 옮기도록
 function renderMap(e){
 
     const filter = $(e.relatedTarget).attr('data-enc');
@@ -148,12 +171,21 @@ function renderMap(e){
     $("#modalDutyAddr").text(parsedData.dutyAddr);
     $("#modalDutyTel").text(parsedData.dutyTel3);
     let mapContainer = document.getElementById('mapContainer');
-    let options = {
-        center: new daum.maps.LatLng(33.450701, 126.570667),
-        level: 4
-    };
+    let map = null;
 
-    let map = new daum.maps.Map(mapContainer, options); //지도 생성 및 객체 리턴
+    // LOAD 시 할 역할을 부여하여 다른 병원 클릭 시 기존 지도데이터가 남지 않도록 수정
+    daum.maps.load(()=>{
+        let options = {
+            center: new daum.maps.LatLng(0, 0),
+            level: 4
+        };
+        map = new daum.maps.Map(mapContainer, options); //지도 생성 및 객체 리턴
+        var mapTypeControl = new daum.maps.MapTypeControl();
+        var zoomControl = new daum.maps.ZoomControl();
+        map.addControl(mapTypeControl, daum.maps.ControlPosition.TOPRIGHT);
+        map.addControl(zoomControl, daum.maps.ControlPosition.RIGHT);
+    });
+
     let geocoder = new daum.maps.services.Geocoder(); //주소-좌표 변환 객제 생성
     let roadAddrFull = parsedData.dutyAddr;
     geocoder.addressSearch(roadAddrFull, function (result, status) { //주소로 좌표 검색.
@@ -166,11 +198,6 @@ function renderMap(e){
             map.setCenter(coords);
         }
     });
-
-    var mapTypeControl = new daum.maps.MapTypeControl();
-    var zoomControl = new daum.maps.ZoomControl();
-    map.addControl(mapTypeControl, daum.maps.ControlPosition.TOPRIGHT);
-    map.addControl(zoomControl, daum.maps.ControlPosition.RIGHT);
 
 }
 
