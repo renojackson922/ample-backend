@@ -1,8 +1,12 @@
 package com.silkdog.ambulance.controller.dataApi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.json.XML;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -18,15 +22,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
+@RequestMapping("data-api")
+@RequiredArgsConstructor
 public class DataApiController {
 
     public static int INDENT_FACTOR = 4;
 
-    @RequestMapping(path = "/api/getHospitalAvailable", method = RequestMethod.GET, produces = { "application/xml", "text/xml" })
-    public @ResponseBody String getHospitalAvailable(String stage1, String stage2, String pageNo, String numOfRows) throws MalformedURLException {
-        String _stage1 = (stage1 != null && !stage1.isEmpty()) ? stage1 : ""; //stage1 ?? ""; <!-- 이거 C#, 코틀린에서밖에 안되는거 같다 충격.....
-        String _stage2 = (stage2 != null && !stage2.isEmpty()) ? stage2 : ""; //stage2 ?? "";
+    @ResponseBody
+    @RequestMapping(path = "getHospitalAvailable", method = RequestMethod.GET, produces = { "application/xml", "text/xml" })
+    public ResponseEntity<String> getHospitalAvailable(String stage1, String stage2, String pageNo, String numOfRows) throws MalformedURLException {
+
+        String _stage1 = StringUtils.isNoneEmpty(stage1) ? stage1 : "";
+        String _stage2 = StringUtils.isNoneEmpty(stage2) ? stage2 : "";
 
         String urlString = "http://apis.data.go.kr/B552657/ErmctInfoInqireService/getEmrrmRltmUsefulSckbdInfoInqire"; /*URL*/
         String queryParams = '?' + URLEncoder.encode("ServiceKey") + "="+ "3JSKy8OQAgWy6GIIMYV4ClVy43GIiu2HHfoRGbW1diBBLkHoI9u68zbpYJMVinZPW0m8dwrsH9icXrXAIQxd%2Fw%3D%3D"; /*Service Key*/
@@ -55,7 +64,7 @@ public class DataApiController {
             if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 br = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
                 String line;
-                while ((line = br.readLine()) != null) {
+                while ((line = br.readLine()) != null && !"".equals(line)) {
                     sb.append(line).append("\n");
                     //System.out.println(line);
                 }
@@ -69,16 +78,20 @@ public class DataApiController {
         }
 
         JSONObject xmlJSONObj = XML.toJSONObject(sb.toString());
-        String jsonPrettyPrintString = xmlJSONObj.toString(INDENT_FACTOR);
-        //System.out.println(jsonPrettyPrintString);
+        String jsonPrettyPrintString = xmlJSONObj.getJSONObject("response")
+                                                 .getJSONObject("body")
+                                                 .getJSONObject("items")
+                                                 .toString(INDENT_FACTOR);
 
-        return jsonPrettyPrintString;
+        return ResponseEntity.ok(jsonPrettyPrintString);
     }
 
-    @RequestMapping(path = "/api/getHospitalAddr", method = RequestMethod.GET, produces = { "application/xml", "text/xml" })
-    public @ResponseBody String getHospitalAddr(String stage1, String stage2, String pageNo, String numOfRows) throws MalformedURLException {
-        String _stage1 = (stage1 != null && !stage1.isEmpty()) ? stage1 : ""; //stage1 ?? ""; <!-- 이거 C#, 코틀린에서밖에 안되는거 같다 충격..... null coalescing operator
-        String _stage2 = (stage2 != null && !stage2.isEmpty()) ? stage2 : ""; //stage2 ?? "";
+    @ResponseBody
+    @RequestMapping(path = "getHospitalAddr", method = RequestMethod.GET, produces = { "application/xml", "text/xml" })
+    public ResponseEntity<String> getHospitalAddr(String stage1, String stage2, String pageNo, String numOfRows) throws MalformedURLException {
+
+        String _stage1 = StringUtils.isNoneEmpty(stage1) ? stage1 : "";
+        String _stage2 = StringUtils.isNoneEmpty(stage2) ? stage2 : "";
 
         String urlString = "http://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytListInfoInqire"; /*URL*/
         String queryParams = '?' + URLEncoder.encode("ServiceKey") + "="+ "3JSKy8OQAgWy6GIIMYV4ClVy43GIiu2HHfoRGbW1diBBLkHoI9u68zbpYJMVinZPW0m8dwrsH9icXrXAIQxd%2Fw%3D%3D"; /*Service Key*/
@@ -108,7 +121,7 @@ public class DataApiController {
             if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 br = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
                 String line;
-                while ((line = br.readLine()) != null) {
+                while ((line = br.readLine()) != null && !"".equals(line)) {
                     sb.append(line).append("\n");
                     //System.out.println(line);
                 }
@@ -122,10 +135,12 @@ public class DataApiController {
         }
 
         JSONObject xmlJSONObj = XML.toJSONObject(sb.toString());
-        String jsonPrettyPrintString = xmlJSONObj.toString(INDENT_FACTOR);
-        //System.out.println(jsonPrettyPrintString);
+        String jsonPrettyPrintString = xmlJSONObj.getJSONObject("response")
+                                                 .getJSONObject("body")
+                                                 .getJSONObject("items")
+                                                 .toString(INDENT_FACTOR);
 
-        return jsonPrettyPrintString;
+        return ResponseEntity.ok(jsonPrettyPrintString);
     }
 
 }
