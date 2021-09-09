@@ -1,4 +1,4 @@
-package com.silkdog.ambulance.controller.dataApi;
+package com.silkdog.ambulance.restapi.location.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("data-api")
 @RequiredArgsConstructor
-public class DataApiController {
+public class LocationController {
 
     public static int INDENT_FACTOR = 4;
 
