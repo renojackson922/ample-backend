@@ -1,26 +1,23 @@
 package com.silkdog.ambulance.restapi.location.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.silkdog.ambulance.restapi.location.domain.ErmctInfoInqire;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-import org.json.XML;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -32,7 +29,7 @@ public class LocationController {
 
     @ResponseBody
     @RequestMapping(path = "getHospitalAvailable", method = RequestMethod.GET, produces = { "application/xml", "text/xml" })
-    public ResponseEntity<String> getHospitalAvailable(String stage1, String stage2, String pageNo, String numOfRows) throws MalformedURLException {
+    public ResponseEntity<String> getHospitalAvailable(String stage1, String stage2, String pageNo, String numOfRows) throws IOException, NullPointerException {
 
         String _stage1 = StringUtils.isNoneEmpty(stage1) ? stage1 : "";
         String _stage2 = StringUtils.isNoneEmpty(stage2) ? stage2 : "";
@@ -44,51 +41,23 @@ public class LocationController {
         queryParams += '&' + URLEncoder.encode("pageNo") + '=' + URLEncoder.encode("1"); /**/
         queryParams += '&' + URLEncoder.encode("numOfRows") + '=' + URLEncoder.encode("30"); /**/
 
-        URL url = new URL(urlString + queryParams);
-        ObjectMapper mapper = new ObjectMapper();
-        StringBuilder sb = new StringBuilder();
-        BufferedReader br;
+        OkHttpClient client = new OkHttpClient();
+        Request.Builder builder = new Request.Builder().url(new URL(urlString + queryParams));
+        Request request = builder.build();
 
-        List<Map<String, Object>> listMap = new ArrayList<Map<String,Object>>();
+        Response response = client.newCall(request).execute();
+        response.close();
+        JSONObject object = new JSONObject(response.body().string());
 
-        try {
-            HttpURLConnection con = (HttpURLConnection)url.openConnection();
+        Gson gson = new Gson();
+        ErmctInfoInqire ermctInfoInqire = gson.fromJson(String.valueOf(object), ErmctInfoInqire.class);
 
-            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            con.setRequestMethod("GET");
-            con.setConnectTimeout(5000);
-            con.setReadTimeout(5000);
-
-            con.setDoOutput(false);  // 출력은 true; else false
-
-            if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                br = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
-                String line;
-                while ((line = br.readLine()) != null && !"".equals(line)) {
-                    sb.append(line).append("\n");
-                    //System.out.println(line);
-                }
-                br.close();
-
-                //mapper.readValue(sb.toString(), new TypeReference<List<Map<String, Object>>>(){});
-                //model.addAttribute("listMap", listMap);
-            }
-        } catch (Exception e) {
-            System.err.println(e.toString());
-        }
-
-        JSONObject xmlJSONObj = XML.toJSONObject(sb.toString());
-        String jsonPrettyPrintString = xmlJSONObj.getJSONObject("response")
-                                                 .getJSONObject("body")
-                                                 .getJSONObject("items")
-                                                 .toString(INDENT_FACTOR);
-
-        return ResponseEntity.ok(jsonPrettyPrintString);
+        return ResponseEntity.ok("jsonPrettyPrintString");
     }
 
     @ResponseBody
     @RequestMapping(path = "getHospitalAddr", method = RequestMethod.GET, produces = { "application/xml", "text/xml" })
-    public ResponseEntity<String> getHospitalAddr(String stage1, String stage2, String pageNo, String numOfRows) throws MalformedURLException {
+    public ResponseEntity<String> getHospitalAddr(String stage1, String stage2, String pageNo, String numOfRows) throws IOException, NullPointerException {
 
         String _stage1 = StringUtils.isNoneEmpty(stage1) ? stage1 : "";
         String _stage2 = StringUtils.isNoneEmpty(stage2) ? stage2 : "";
@@ -101,46 +70,17 @@ public class LocationController {
         queryParams += '&' + URLEncoder.encode("pageNo") + '=' + URLEncoder.encode("1"); /**/
         queryParams += '&' + URLEncoder.encode("numOfRows") + '=' + URLEncoder.encode("30"); /**/
 
-        URL url = new URL(urlString + queryParams);
-        ObjectMapper mapper = new ObjectMapper();
-        StringBuilder sb = new StringBuilder();
-        BufferedReader br;
+        OkHttpClient client = new OkHttpClient();
+        Request.Builder builder = new Request.Builder().url(new URL(urlString + queryParams));
+        Request request = builder.build();
 
-        List<Map<String, Object>> listMap = new ArrayList<Map<String,Object>>();
+        Response response = client.newCall(request).execute();
+        JSONObject object = new JSONObject(response.body().string());
 
-        try {
-            HttpURLConnection con = (HttpURLConnection)url.openConnection();
+        Gson gson = new Gson();
+        ErmctInfoInqire ermctInfoInqire = gson.fromJson(String.valueOf(object), ErmctInfoInqire.class);
 
-            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            con.setRequestMethod("GET");
-            con.setConnectTimeout(5000);
-            con.setReadTimeout(5000);
-
-            con.setDoOutput(false);  // 출력은 true; else false
-
-            if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                br = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"));
-                String line;
-                while ((line = br.readLine()) != null && !"".equals(line)) {
-                    sb.append(line).append("\n");
-                    //System.out.println(line);
-                }
-                br.close();
-
-                //mapper.readValue(sb.toString(), new TypeReference<List<Map<String, Object>>>(){});
-                //model.addAttribute("listMap", listMap);
-            }
-        } catch (Exception e) {
-            System.err.println(e.toString());
-        }
-
-        JSONObject xmlJSONObj = XML.toJSONObject(sb.toString());
-        String jsonPrettyPrintString = xmlJSONObj.getJSONObject("response")
-                                                 .getJSONObject("body")
-                                                 .getJSONObject("items")
-                                                 .toString(INDENT_FACTOR);
-
-        return ResponseEntity.ok(jsonPrettyPrintString);
+        return ResponseEntity.ok("jsonPrettyPrintString");
     }
 
 }
