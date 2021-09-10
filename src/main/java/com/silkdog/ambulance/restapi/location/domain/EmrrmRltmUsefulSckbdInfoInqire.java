@@ -49,4 +49,7 @@ public class EmrrmRltmUsefulSckbdInfoInqire {
     private String dutyName; // 기관명
     private String dutyTel3; // 응급실전화
 
+    private String dutyAddr;
+    private String discCalc;
+
 }
