@@ -2,7 +2,6 @@ package com.silkdog.ambulance.restapi.location.domain;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.Setter;
 
 /**
@@ -10,13 +9,13 @@ import lombok.Setter;
  * Author: Margarette
  * Description: 응급실 실시간 가용병상정보 조회 도메인
  * (https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15000563)
- * */
+ */
 @Getter
 @Setter
 @Builder
-public class ErmctInfoInqire {
+public class EmrrmRltmUsefulSckbdInfoInqire {
 
-    private Integer resultCode;  // 결과코드
+    private String resultCode;  // 결과코드
     private String resultMsg;  // 결과메시지
     private Integer rnum;  // 일련번호
     private String hpid;  // 기관코드
@@ -47,7 +46,7 @@ public class ErmctInfoInqire {
     private String hv10;  // VENTI(소아)
     private String hv11;  // 인큐베이터(보육기)
     private String hv12;  // 소아당직의 직통연락처
-    private String dutyname; // 기관명
-    private String dutytel3; // 응급실전화
+    private String dutyName; // 기관명
+    private String dutyTel3; // 응급실전화
 
 }
